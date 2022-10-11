@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
+#include "hardware/watchdog.h"
 
 volatile int running = 1;
 
+static const uint32_t WATCHDOG_TIMEOUT_MS = 200;
 // From here: https://www.i-programmer.info/programming/hardware/14849-the-pico-in-c-basic-pwm.html?start=2
 uint32_t pwm_set_freq_duty(uint slice_num,
        uint chan,uint32_t f, int d)
@@ -23,10 +25,25 @@ uint32_t pwm_set_freq_duty(uint slice_num,
 
 void pwm_chirp(uint slice_num, uint chan, uint32_t f, uint32_t duration_ms)
 {
+    uint32_t current_duration = 0;
     pwm_set_enabled(slice_num, 0);
     (void)pwm_set_freq_duty(slice_num, chan, f, 50);
     pwm_set_enabled(slice_num, 1);
-    sleep_ms(duration_ms);
+    if (duration_ms > WATCHDOG_TIMEOUT_MS/2)
+    {
+        for (int i=0;i<duration_ms/50;++i)
+        {            
+            watchdog_update();
+            sleep_ms(50);
+            current_duration += 50;
+        }
+        watchdog_update();
+        sleep_ms(duration_ms - current_duration);
+    }
+    else
+    {
+        sleep_ms(duration_ms);
+    }
     pwm_set_enabled(slice_num, 0);
 }
 
@@ -83,10 +100,19 @@ int main (void)
     unsigned slice=pwm_gpio_to_slice_num (BUZZER_PIN); 
     unsigned channel=pwm_gpio_to_channel (BUZZER_PIN);
 
-    pwm_chirp(slice, channel, 400, 10);
-    puts("\n\nStartup\n");
+    if (watchdog_caused_reboot()) 
+    {
+        printf("\n\nRebooted by Watchdog\n\n");
+        pwm_chirp(slice, channel, 800, 100);
+    }
+    else
+    {
+        puts("\n\nStartup\n");
+        pwm_chirp(slice, channel, 400, 100);
+    }
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
+    watchdog_enable(WATCHDOG_TIMEOUT_MS, 1);
 
     while (running)
     {
@@ -94,12 +120,16 @@ int main (void)
         application_good = true;
         while (application_good)
         {
+            watchdog_update();
             gpio_put(LED_PIN, 0);
             ++i;
-            putchar('.');
+            if (i%1000 == 0)
+            {
+                putchar('.');
+            }
             if (CONTINUOUS_PINGS)
             {
-                pwm_chirp(slice, channel, 800, 10);
+                pwm_chirp(slice, channel, 400, 10);
             }
             application_good = check_application();
             gpio_put(LED_PIN, 1);
@@ -107,7 +137,7 @@ int main (void)
                 break;
         }
         puts("\nFall-back to 'Insecure Bootloader'\n");
-        pwm_chirp(slice, channel, 1600, 500);
+        pwm_chirp(slice, channel, 1600, 400);
         if (TEST_MODE && ((i%30) == 0))
             break;
     }
