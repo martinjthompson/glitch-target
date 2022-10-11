@@ -1,7 +1,7 @@
 # glitch-target
 A simple target for glitching experiments.
 
-Created to give a simple target for attempting to learn about glitch attacks, using simple tools like the [ChipShouter PicoEMP])(https://github.com/newaetech/chipshouter-picoemp).
+Created to give a simple target for attempting to learn about glitch attacks, using simple tools like the [ChipShouter PicoEMP](https://github.com/newaetech/chipshouter-picoemp).
 
 This code is intended for the Raspberry Pi Pico.  It simulates a microcontroller boot program which is checking the CRC of the secure code that it will run.  If the CRC fails, such code might fall back to a less secure bootloader or similar.  There is no simulation of the "application" or "bootloader", the code merely cycles round and runs again.  This makes it easy to scan over the PCB with your glitching probe and experiment with finding sensitive areas.  For me, the most sensitive area was along the side next to the copyright date on the silkscreen.
 
