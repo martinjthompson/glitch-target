@@ -14,4 +14,19 @@ From these you can establish what results your experiments are having whilst kee
 
 The normal serial port also offers written feedback at 115200baud.
 
+## Building
+
+Copy in the `pico_sdk_import.cmake` file from `<PICO_SDK_PATH>/external/pico_sdk_import.cmake`.
+
+Follow the usual Pico build process - for me on Windows its something like:
+
+```
+mkdir build
+cd build
+cmake -G "NMake Makefiles" ..
+nmake
+copy glitch_target.uf2 f:
+```
+
+
  
